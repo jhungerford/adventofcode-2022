@@ -19,15 +19,14 @@ fn load_elves(filename: &str) -> Vec<Elf> {
     let mut elves = Vec::new();
     let mut calories = Vec::new();
 
-    for line_res in f.lines() {
-        let line = line_res.unwrap();
-
-        if line == "" {
-            elves.push(Elf{ calories });
-            calories = Vec::new();
-        } else {
-            let cals = line.parse::<i32>().unwrap();
-            calories.push(cals);
+    for line in f.lines().flatten() {
+        match (line.as_str(), line.parse::<i32>()) {
+            ("", _) => {
+                elves.push(Elf{ calories });
+                calories = Vec::new();
+            },
+            (_, Ok(num)) => calories.push(num),
+            (_, _) => panic!("Invalid line: {}", line),
         }
     }
 
