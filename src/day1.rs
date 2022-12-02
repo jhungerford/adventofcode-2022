@@ -6,8 +6,9 @@ use itertools::Itertools;
 pub fn solution() {
     let elves = load_elves("input/day1.txt");
 
+    println!("Day 1");
     println!("Part 1: {}", most_food(&elves));
-    println!("Part 1: {}", top_three(&elves));
+    println!("Part 2: {}", top_three(&elves));
 }
 
 /// load_elves parses a list of elves and the calories they are carrying from the given file.
