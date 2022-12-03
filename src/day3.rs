@@ -18,7 +18,7 @@ fn parse_rucksacks(filename: &str) -> Vec<Rucksack> {
     let f = BufReader::new(f.unwrap());
 
     f.lines().flatten()
-        .map(|line| Rucksack{ contents: line})
+        .map(|line| Rucksack{ contents: line })
         .collect()
 }
 
