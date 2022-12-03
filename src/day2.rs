@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
+#[allow(dead_code)]
 pub fn solution() {
     let rounds = load_rounds("input/day2.txt");
 
