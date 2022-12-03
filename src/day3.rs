@@ -9,38 +9,31 @@ pub fn solution() {
 
     println!("Day 3");
     println!("Part 1: {}", total_priority(&rucksacks));
+    println!("Part 2: {}", badge_priority(&rucksacks));
 }
 
+/// parse_rucksacks parses rucksack contents out of the given file, one per line.
 fn parse_rucksacks(filename: &str) -> Vec<Rucksack> {
     let f = File::open(filename);
     let f = BufReader::new(f.unwrap());
 
     f.lines().flatten()
-        .map(|line| Rucksack::from_str(&line))
+        .map(|line| Rucksack{ contents: line})
         .collect()
 }
 
 struct Rucksack {
-    left: String,
-    right: String,
+    contents: String
 }
 
 impl Rucksack {
+    /// shared returns the item that is shared between the two halves of this rucksack.
+    fn shared_halves(&self) -> char {
+        let middle = self.contents.len() / 2;
+        let left = self.contents[..middle].chars().collect::<HashSet<char>>();
+        let right = self.contents[middle..].chars().collect::<HashSet<char>>();
 
-    /// from_str parses a Rucksack from the given string.
-    fn from_str(str: &str) -> Self {
-        let middle = str.len() / 2;
-        let (left, right) = (str[..middle].to_string(), str[middle..].to_string());
-
-        Rucksack {left, right}
-    }
-
-    /// shared returns the item that is shared between two rucksacks.
-    fn shared(&self) -> char {
-        let left_items = self.left.chars().collect::<HashSet<char>>();
-        let right_items = self.right.chars().collect::<HashSet<char>>();
-
-        left_items.intersection(&right_items).at_most_one().unwrap().unwrap().to_owned()
+        left.intersection(&right).at_most_one().unwrap().unwrap().to_owned()
     }
 }
 
@@ -57,7 +50,24 @@ fn priority(item: char) -> i32 {
 
 /// total_priority returns the sum of the priority of the shared item in each rucksack.
 fn total_priority(rucksacks: &Vec<Rucksack>) -> i32 {
-    rucksacks.iter().map(Rucksack::shared).map(priority).sum()
+    rucksacks.iter().map(Rucksack::shared_halves).map(priority).sum()
+}
+
+/// shared returns the item that is shared between all of the rucksacks.
+fn shared_badge(rucksacks: &[Rucksack]) -> char {
+    let intersection = rucksacks.iter()
+        .map(|r| r.contents.chars().collect::<HashSet<char>>())
+        .reduce(|a, b| a.intersection(&b).cloned().collect::<HashSet<char>>()).unwrap();
+
+    intersection.into_iter().at_most_one().unwrap().unwrap().to_owned()
+}
+
+/// badge_priority returns the sum of priorities of items that are shared in three-Elf groups.
+fn badge_priority(rucksacks: &Vec<Rucksack>) -> i32 {
+    rucksacks.chunks_exact(3)
+        .map(shared_badge)
+        .map(priority)
+        .sum()
 }
 
 #[cfg(test)]
@@ -65,12 +75,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_shared() {
+    fn test_shared_halves() {
         let rucksacks = parse_rucksacks("input/day3_sample.txt");
         let sample_shared = ['p', 'L', 'P', 'v', 't', 's'];
 
         for (rucksack, expected) in rucksacks.iter().zip(sample_shared) {
-            assert_eq!(expected, rucksack.shared());
+            assert_eq!(expected, rucksack.shared_halves());
         }
     }
 
@@ -85,5 +95,12 @@ mod tests {
         let rucksacks = parse_rucksacks("input/day3_sample.txt");
 
         assert_eq!(157, total_priority(&rucksacks));
+    }
+
+    #[test]
+    fn test_badge_priority() {
+        let rucksacks = parse_rucksacks("input/day3_sample.txt");
+
+        assert_eq!(70, badge_priority(&rucksacks));
     }
 }
