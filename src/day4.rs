@@ -10,7 +10,8 @@ pub fn solution() {
     let assignments = parse_assignments("input/day4.txt");
 
     println!("Day 4");
-    println!("Part 1: {}", num_overlap(&assignments));
+    println!("Part 1: {}", num_overlap(&assignments, Assignment::full_overlap));
+    println!("Part 2: {}", num_overlap(&assignments, Assignment::partial_overlap));
 }
 
 fn parse_assignments(filename: &str) -> Vec<Assignment> {
@@ -45,16 +46,22 @@ impl FromStr for Assignment {
 }
 
 impl Assignment {
-    /// overlap returns whether one of the ranges in this assignment completely contains the other.
-    fn overlap(&self) -> bool {
+    /// full_overlap returns whether one of the ranges in this assignment fully contains the other.
+    fn full_overlap(&self) -> bool {
         (self.a.contains(self.b.start()) && self.a.contains(self.b.end()))
             || (self.b.contains(self.a.start()) && self.b.contains(self.a.end()))
+    }
+
+    /// partial_overlap returns whether one of the ranges in this assignment partially contains the other.
+    fn partial_overlap(&self) -> bool {
+        self.a.contains(self.b.start()) || self.a.contains(self.b.end())
+            || self.b.contains(self.a.start()) || self.b.contains(self.a.end())
     }
 }
 
 /// num_overlap returns the number of assignments where one assignment completely covers the other.
-fn num_overlap(assignments: &Vec<Assignment>) -> usize {
-    assignments.iter().filter(|a| a.overlap()).count()
+fn num_overlap(assignments: &Vec<Assignment>, overlap_fn: fn(&Assignment) -> bool) -> usize {
+    assignments.iter().filter(|a| overlap_fn(a)).count()
 }
 
 #[cfg(test)]
@@ -62,9 +69,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_num_overlap() {
+    fn test_num_overlap_full() {
         let assignments = parse_assignments("input/day4_sample.txt");
 
-        assert_eq!(2, num_overlap(&assignments));
+        assert_eq!(2, num_overlap(&assignments, Assignment::full_overlap));
+    }
+
+    #[test]
+    fn test_num_overlap_partial() {
+        let assignments = parse_assignments("input/day4_sample.txt");
+
+        assert_eq!(4, num_overlap(&assignments, Assignment::partial_overlap));
     }
 }
