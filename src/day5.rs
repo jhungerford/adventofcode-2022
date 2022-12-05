@@ -10,7 +10,8 @@ pub fn solution() {
     let puzzle = parse_puzzle("input/day5.txt");
 
     println!("Day 5");
-    println!("Part 1: {}", puzzle.run());
+    println!("Part 1: {}", puzzle.run(Instruction::run_single));
+    println!("Part 2: {}", puzzle.run(Instruction::run_stack));
 }
 
 struct Puzzle {
@@ -75,12 +76,14 @@ fn parse_crates(lines: &Vec<String>) -> Vec<VecDeque<char>> {
     crates
 }
 
+type InstructionRun = fn(&Instruction, &mut Vec<VecDeque<char>>);
+
 impl Puzzle {
-    fn run(&self) -> String {
+    fn run(&self, instruction_run: InstructionRun) -> String {
         let mut crates = self.crates.clone();
 
         for instruction in &self.instructions {
-            instruction.run(&mut crates);
+            instruction_run(instruction, &mut crates);
         }
 
         // Puzzle solution is the letters in the crate at the top of each stack.
@@ -91,6 +94,7 @@ impl Puzzle {
     }
 }
 
+#[derive(Debug)]
 struct Instruction {
     num: usize,
     from: usize,
@@ -117,12 +121,24 @@ impl FromStr for Instruction {
 }
 
 impl Instruction {
-    fn run(&self, crates: &mut Vec<VecDeque<char>>) {
+    fn run_single(&self, crates: &mut Vec<VecDeque<char>>) {
         // Instructions look like 'move 3 from 1 to 3'
         for _ in 0..self.num {
             if let Some(c) = crates[self.from.clone() - 1].pop_back() {
                 crates[self.to.clone() - 1].push_back(c)
             }
+        }
+    }
+
+    fn run_stack(&self, crates: &mut Vec<VecDeque<char>>) {
+        // Instructions look like 'move 3 from 1 to 3'
+        let stack = (0..self.num).map(|_| crates[self.from.clone() - 1].pop_back())
+            .flatten()
+            .collect_vec();
+
+        // Push the stack in reverse order to preserve it's original order.
+        for c in stack.into_iter().rev() {
+            crates[self.to.clone() - 1].push_back(c)
         }
     }
 }
@@ -132,9 +148,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_puzzle_run() {
+    fn test_puzzle_run_single() {
         let puzzle = parse_puzzle("input/day5_sample.txt");
 
-        assert_eq!("CMZ", puzzle.run());
+        assert_eq!("CMZ", puzzle.run(Instruction::run_single));
+    }
+
+    #[test]
+    fn test_puzzle_run_stack() {
+        let puzzle = parse_puzzle("input/day5_sample.txt");
+
+        assert_eq!("MCD", puzzle.run(Instruction::run_stack));
     }
 }
