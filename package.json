@@ -1,0 +1,27 @@
+{
+  "name": "adventofcode-2022",
+  "version": "1.0.0",
+  "description": "Solutions to the 2022 advent of code in javascript",
+  "main": "src/day1.js",
+  "bin": {
+    "day1": "src/day1.js"
+  },
+  "scripts": {
+    "start": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/index.ts",
+    "start:windows": "nodemon --watch 'src/**/*.ts' --exec \"npx ts-node\" src/index.ts",
+    "create": "npm run build && npm run test",
+    "build": "tsc -p .",
+    "local": "npm i && day1",
+    "refresh": "rm -rf ./node_modules ./package-lock.json && npm install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jhungerford/adventofcode-2022.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jhungerford/adventofcode-2022/issues"
+  },
+  "homepage": "https://github.com/jhungerford/adventofcode-2022#readme"
+}
