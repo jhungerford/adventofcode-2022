@@ -8,7 +8,7 @@ pub fn solution() {
 
     println!("Day 7");
     println!("Part 1: {}", total_small(&root));
-    println!("Part 1: {}", delete_dir(&root, 70_000_000, 30_000_000));
+    println!("Part 2: {}", delete_dir(&root, 70_000_000, 30_000_000));
 }
 
 fn parse_output(filename: &str) -> Dir {
