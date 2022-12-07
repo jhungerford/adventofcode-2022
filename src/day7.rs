@@ -7,7 +7,8 @@ pub fn solution() {
     let root = parse_output("input/day7.txt");
 
     println!("Day 7");
-    println!("Part 1: {}", total_small(&root))
+    println!("Part 1: {}", total_small(&root));
+    println!("Part 1: {}", delete_dir(&root, 70_000_000, 30_000_000));
 }
 
 fn parse_output(filename: &str) -> Dir {
@@ -41,9 +42,24 @@ fn parse_output(filename: &str) -> Dir {
         } else if !line.is_empty() {
             // 8033020 d.log - add to the total size of this dir
             let file_size = line.split_whitespace().next().unwrap().parse::<u64>().unwrap();
-            get_dir(&mut root, &path).files_size += file_size;
+            get_dir(&mut root, &path).size += file_size;
         }
     }
+
+    // dir size is currently only the files immediately in a directory.
+    // Both parts want the recursive size (files + child dir sizes) - update size.
+
+    // add_child_size adds the recursive size of child dirs to the given directory's size,
+    // and returns the directory's recursive size.
+    fn add_child_size(dir: &mut Dir) -> u64 {
+        dir.size = dir.children.iter_mut().fold(dir.size, |size, (_, child_dir)| {
+            size + add_child_size(child_dir)
+        });
+
+        dir.size
+    }
+
+    add_child_size(&mut root);
 
     root
 }
@@ -61,7 +77,7 @@ fn get_dir<'a>(root: &'a mut Dir, path: &VecDeque<String>) -> &'a mut Dir {
 #[derive(Debug)]
 struct Dir {
     _name: String,
-    files_size: u64,
+    size: u64,
     children: HashMap<String, Dir>,
 }
 
@@ -69,33 +85,48 @@ impl Dir {
     fn new(name: String) -> Self {
         return Dir {
             _name: name,
-            files_size: 0,
+            size: 0,
             children: HashMap::new(),
         }
     }
 }
 
-fn total_small(root: &Dir) -> u64 {
-    // total_small_sub returns the total size of the directory and it's children (recursive)
-    // as well as the total size of small subdirectories.
-    fn total_small_sub(dir: &Dir) -> (u64, u64) {
-        let mut dir_size = dir.files_size;
-        let mut total = 0;
+/// total_small returns the total size of directories less than 100_000 bytes.
+/// Directory size is recursive, so file sizes can be counted more than once.
+fn total_small(dir: &Dir) -> u64 {
+    let mut total = 0;
 
-        for (_, dir) in &dir.children {
-            let (child_size, sub_total) = total_small_sub(dir);
-            dir_size += child_size;
-            total += sub_total;
-        }
-
-        if dir_size < 100_000 {
-            total += dir_size;
-        }
-
-        (dir_size, total)
+    if dir.size < 100_000 {
+        total += dir.size;
     }
 
-    total_small_sub(root).1
+    for (_, child) in &dir.children {
+        total += total_small(child);
+    }
+
+    total
+}
+
+/// delete_dir returns the size of the smallest directory to delete that will free enough space.
+fn delete_dir(root: &Dir, total: u64, need: u64) -> u64 {
+    // find the size of the smallest directory that frees up enough space to reach need.
+
+    fn smallest_free_dir(dir: &Dir, to_free: u64, smallest: u64) -> u64 {
+        let mut smallest = smallest;
+
+        if dir.size > to_free && dir.size < smallest {
+            smallest = dir.size;
+        }
+
+        for (_, child_dir) in &dir.children {
+            smallest = smallest_free_dir(child_dir, to_free, smallest);
+        }
+
+        smallest
+    }
+
+    let to_free = need - (total - root.size);
+    smallest_free_dir(root, to_free, u64::MAX)
 }
 
 #[cfg(test)]
@@ -106,6 +137,13 @@ mod tests {
     fn test_total_small() {
         let root = parse_output("input/day7_sample.txt");
 
-        assert_eq!(95437, total_small(&root))
+        assert_eq!(95437, total_small(&root));
+    }
+
+    #[test]
+    fn test_delete_dir() {
+        let root = parse_output("input/day7_sample.txt");
+
+        assert_eq!(24933642, delete_dir(&root, 70_000_000, 30_000_000));
     }
 }
