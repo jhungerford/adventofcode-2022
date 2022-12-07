@@ -4,6 +4,7 @@ use itertools::Itertools;
 static PACKET: usize = 4;
 static MESSAGE: usize = 14;
 
+#[allow(dead_code)]
 pub fn solution() {
     let data = read_to_string("input/day6.txt").unwrap();
 
