@@ -46,7 +46,7 @@ fn parse_output(filename: &str) -> Dir {
         }
     }
 
-    // dir size is currently only the files immediately in a directory.
+    // dir size currently only counts the files that are immediately in a directory.
     // Both parts want the recursive size (files + child dir sizes) - update size.
 
     // add_child_size adds the recursive size of child dirs to the given directory's size,
