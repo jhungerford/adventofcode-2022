@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+
 use itertools::Itertools;
 
 #[allow(dead_code)]
@@ -10,6 +11,7 @@ pub fn solution() {
 
     println!("Day 8");
     println!("Part 1: {}", count_visible(&trees));
+    println!("Part 2: {}", highest_score(&trees));
 }
 
 type Trees = Vec<Vec<u32>>;
@@ -49,39 +51,21 @@ fn count_visible(trees: &Trees) -> usize {
     let (height, width) = (trees.len(), trees[0].len());
 
     for row in 0..height {
-        let (mut tallest_left, mut tallest_right) = (-1, -1);
-
         for col in 0..width {
-            let (left, right) = (Point::at(row, col), Point::at(row, width - col - 1));
-            let (left_height, right_height) = (tree_at(trees, left), tree_at(trees, right));
+            let right = (0..width).map(|c| Point::at(row, c)).collect_vec();
+            let left = (0..width).rev().map(|c| Point::at(row, c)).collect_vec();
+            let down = (0..height).map(|r| Point::at(r, col)).collect_vec();
+            let up = (0..height).rev().map(|r| Point::at(r, col)).collect_vec();
 
-            if left_height as i32 > tallest_left {
-                visible.insert(left);
-                tallest_left = left_height as i32;
-            }
-
-            if right_height as i32 > tallest_right {
-                visible.insert(right);
-                tallest_right = right_height as i32;
-            }
-        }
-    }
-
-    for col in 0..width {
-        let (mut tallest_top, mut tallest_bottom) = (-1, -1);
-
-        for row in 0..height {
-            let (top, bottom) = (Point::at(row, col), Point::at(height - row - 1, col));
-            let (top_height, bottom_height) = (tree_at(trees, top), tree_at(trees, bottom));
-
-            if top_height as i32 > tallest_top {
-                visible.insert(top);
-                tallest_top = top_height as i32;
-            }
-
-            if bottom_height as i32 > tallest_bottom {
-                visible.insert(bottom);
-                tallest_bottom = bottom_height as i32;
+            for order in [right, left, down, up] {
+                let mut tallest =  -1;
+                for point in order {
+                    let height = tree_at(trees, point) as i32;
+                    if height > tallest {
+                        visible.insert(point);
+                        tallest = height;
+                    }
+                }
             }
         }
     }
@@ -106,6 +90,50 @@ fn print_visible(trees: &Trees, visible: &HashSet<Point>) {
     }
 }
 
+/// highest_score returns the highest tree score out of all the trees, where a tree score is the
+/// product of the distance from a tree to a tree with it's height or higher in all directions.
+fn highest_score(trees: &Trees) -> usize {
+    let mut max_score = 0;
+
+    for row in 0..trees.len() {
+        for col in 0..trees[row].len() {
+            max_score = max_score.max(tree_score(trees, Point::at(row, col)));
+        }
+    }
+
+    max_score
+}
+
+/// tree_score returns the score for the given tree.  A tree's score is the product of the
+/// number of trees visible from a location that are shorter than the tree.
+fn tree_score(trees: &Trees, at: Point) -> usize {
+    let (height, width) = (trees.len(), trees[0].len());
+
+    let right = (at.col..width).map(|c| Point::at(at.row, c)).collect_vec();
+    let left = (0..=at.col).rev().map(|c| Point::at(at.row, c)).collect_vec();
+    let down = (0..=at.row).rev().map(|r| Point::at(r, at.col)).collect_vec();
+    let up= (at.row..height).map(|r| Point::at(r, at.col)).collect_vec();
+
+    let tree_height = tree_at(trees, at);
+
+    let mut score = 1;
+
+    for order in [up, left, right, down] {
+        let mut dir_score = 0;
+        for point in order.into_iter().skip(1) {
+            dir_score += 1;
+
+            if tree_height <= tree_at(trees, point) {
+                break;
+            }
+        }
+
+        score *= dir_score;
+    }
+
+    score
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -115,5 +143,12 @@ mod tests {
         let trees = load_trees("input/day8_sample.txt");
 
         assert_eq!(21, count_visible(&trees));
+    }
+
+    #[test]
+    fn test_highest_score() {
+        let trees = load_trees("input/day8_sample.txt");
+
+        assert_eq!(8, highest_score(&trees));
     }
 }
