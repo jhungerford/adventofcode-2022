@@ -12,6 +12,7 @@ pub fn solution() {
 
     println!("Day 9");
     println!("Part 1: {}", count_visited(&moves));
+    println!("Part 2: {}", count_visited_long(&moves));
 }
 
 enum Direction {
@@ -94,7 +95,7 @@ impl Position {
     }
 }
 
-/// count_visited returns the number of positions that the tail visited.
+/// count_visited returns the number of positions that the tail visited with a rope with 1 knot.
 fn count_visited(moves: &Vec<Move>) -> usize {
     let mut tail_positions: HashSet<Position> = HashSet::new();
     let mut head = Position::at(0, 0);
@@ -107,6 +108,30 @@ fn count_visited(moves: &Vec<Move>) -> usize {
             head.step(&m.dir);
             tail.follow(&head);
             tail_positions.insert(tail);
+        }
+    }
+
+    tail_positions.len()
+}
+
+/// count_visited_long returns the number of positions that the tail visited with a rope with
+/// 10 knots.
+fn count_visited_long(moves: &Vec<Move>) -> usize {
+    let mut tail_positions: HashSet<Position> = HashSet::new();
+    let mut rope = vec![Position::at(0, 0); 10];
+
+    tail_positions.insert(rope[9]);
+
+    for m in moves {
+        for _ in 0..m.amount {
+            rope[0].step(&m.dir);
+            for i in 1..rope.len() {
+                let previous = rope[i - 1].clone();
+
+                rope[i].follow(&previous);
+            }
+
+            tail_positions.insert(rope[9]);
         }
     }
 
@@ -173,5 +198,12 @@ mod tests {
         let moves = parse_moves("input/day9_sample.txt");
 
         assert_eq!(13, count_visited(&moves));
+    }
+
+    #[test]
+    fn test_count_visited_long() {
+        let moves = parse_moves("input/day9_sample2.txt");
+
+        assert_eq!(36, count_visited_long(&moves));
     }
 }
