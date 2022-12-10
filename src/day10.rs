@@ -4,6 +4,7 @@ use std::str::FromStr;
 use std::string::ParseError;
 use itertools::Itertools;
 
+#[allow(dead_code)]
 pub fn solution() {
     let instructions = parse_instructions("input/day10.txt");
 
