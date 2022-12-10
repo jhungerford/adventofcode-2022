@@ -4,6 +4,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 use itertools::Itertools;
+use rayon::prelude::*;
 
 #[allow(dead_code)]
 pub fn solution() {
@@ -93,15 +94,14 @@ fn print_visible(trees: &Trees, visible: &HashSet<Point>) {
 /// highest_score returns the highest tree score out of all the trees, where a tree score is the
 /// product of the distance from a tree to a tree with it's height or higher in all directions.
 fn highest_score(trees: &Trees) -> usize {
-    let mut max_score = 0;
+    let points = (0..trees.len()).cartesian_product(0..trees[0].len())
+        .map(|(row, col)| Point::at(row, col))
+        .collect_vec();
 
-    for row in 0..trees.len() {
-        for col in 0..trees[row].len() {
-            max_score = max_score.max(tree_score(trees, Point::at(row, col)));
-        }
-    }
-
-    max_score
+    points.par_iter()
+        .map(|&point| tree_score(trees, point))
+        .max()
+        .unwrap_or(0)
 }
 
 /// tree_score returns the score for the given tree.  A tree's score is the product of the
