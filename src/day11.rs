@@ -7,7 +7,8 @@ pub fn solution() {
     let (configs, states) = parse_monkeys("input/day11.txt");
 
     println!("Day 11");
-    println!("Part 1: {}", monkey_business(&configs, &states));
+    println!("Part 1: {}", monkey_business(&configs, &states, 3, 20));
+    println!("Part 2: {}", monkey_business(&configs, &states, 1, 10_000));
 }
 
 /// parse_monkeys parses a list of monkeys out of the given file.
@@ -38,7 +39,7 @@ fn parse_monkeys(filename: &str) -> (Vec<MonkeyConfig>, Vec<MonkeyState>) {
         let holding = lines.next().unwrap()
             .replace("  Starting items: ", "")
             .split(", ")
-            .map(|item| item.parse::<i32>().unwrap())
+            .map(|item| item.parse::<u64>().unwrap())
             .collect_vec();
 
         // Next line is the operation.
@@ -61,13 +62,13 @@ fn parse_monkeys(filename: &str) -> (Vec<MonkeyConfig>, Vec<MonkeyState>) {
     }
 }
 
-fn parse_operation(statement: String) -> Box<dyn Fn(i32) -> i32> {
+fn parse_operation(statement: String) -> Box<dyn Fn(u64) -> u64> {
     // A statement looks like 'old + 8', where the left side is always old, and the right side
     // is either 'old' or a number.  operand can be * or +.
     let parts = statement.split_whitespace().collect_vec();
 
 
-    match (&parts[0..3], parts[2].parse::<i32>()) {
+    match (&parts[0..3], parts[2].parse::<u64>()) {
         (["old", "*", "old"], _) => Box::new(|item| item * item),
         (["old", "+", "old"], _) => Box::new(|item| item + item),
         (["old", "*", _], Ok(num)) => Box::new(move |item| item * num),
@@ -77,8 +78,8 @@ fn parse_operation(statement: String) -> Box<dyn Fn(i32) -> i32> {
 }
 
 struct MonkeyConfig {
-    operation: Box<dyn Fn(i32) -> i32>,
-    test: i32,
+    operation: Box<dyn Fn(u64) -> u64>,
+    test: u64,
     true_monkey: usize,
     false_monkey: usize,
 }
@@ -86,14 +87,16 @@ struct MonkeyConfig {
 #[derive(Clone, Debug)]
 struct MonkeyState {
     inspected: usize,
-    holding: Vec<i32>,
+    holding: Vec<u64>,
 }
 
 /// round runs a full round of monkeys inspecting and throwing items, modifying the list
 /// of monkeys in the process.  A monkey looks at all of the items it's holding, increases
-/// their worry score by the operation, get bored with the item and divides the score by 3,
+/// their worry score by the operation, get bored with the item and divides the score by reduce,
 /// then tests the item and throws it to another monkey.
-fn round(configs: &Vec<MonkeyConfig>, states: &mut Vec<MonkeyState>) {
+fn round(configs: &Vec<MonkeyConfig>, states: &mut Vec<MonkeyState>, reduce: u64) {
+    let cap = configs.iter().map(|c| c.test).product::<u64>();
+
     for i in 0..configs.len() {
         let config = &configs[i];
 
@@ -102,7 +105,7 @@ fn round(configs: &Vec<MonkeyConfig>, states: &mut Vec<MonkeyState>) {
         states[i].holding.clear();
 
         for item in items {
-            let new_item = (config.operation)(item) / 3;
+            let new_item = ((config.operation)(item) / reduce) % cap;
 
             if new_item % config.test == 0 {
                 states[config.true_monkey].holding.push(new_item);
@@ -114,15 +117,15 @@ fn round(configs: &Vec<MonkeyConfig>, states: &mut Vec<MonkeyState>) {
 }
 
 /// monkey_business returns the monkey business score, which is the product of the number of times
-/// the two most active monkeys inspected items over 20 rounds.
-fn monkey_business(configs: &Vec<MonkeyConfig>, states: &Vec<MonkeyState>) -> i32 {
+/// the two most active monkeys inspected items over the given number of rounds.
+fn monkey_business(configs: &Vec<MonkeyConfig>, states: &Vec<MonkeyState>, reduce: u64, rounds: usize) -> u64 {
     let mut states = states.clone();
 
-    for _ in 0..20 {
-        round(configs, &mut states)
+    for _ in 0..rounds {
+        round(configs, &mut states, reduce)
     }
 
-    states.iter().map(|m| m.inspected as i32).sorted().rev().take(2).product()
+    states.iter().map(|m| m.inspected as u64).sorted().rev().take(2).product()
 }
 
 #[cfg(test)]
@@ -133,6 +136,7 @@ mod tests {
     fn test_monkey_business() {
         let (configs, states) = parse_monkeys("input/day11_sample.txt");
 
-        assert_eq!(10605, monkey_business(&configs, &states));
+        assert_eq!(10605, monkey_business(&configs, &states, 3, 20));
+        assert_eq!(2713310158, monkey_business(&configs, &states, 1, 10_000));
     }
 }
