@@ -2,13 +2,16 @@ use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+
 use itertools::Itertools;
+use rayon::prelude::*;
 
 pub fn solution() {
     let map = parse_map("input/day12.txt");
 
     println!("Day 12");
     println!("Part 1: {}", fewest_steps(&map));
+    println!("Part 2: {}", best_start(&map));
 }
 
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
@@ -146,6 +149,25 @@ fn fewest_steps(map: &Map) -> usize {
     usize::MAX
 }
 
+/// best_start returns the shortest number of steps it takes to get from an 'a' position to the end.
+fn best_start(map: &Map) -> usize {
+    let starts = (0..map.heights.len())
+        .cartesian_product(0..map.heights[0].len())
+        .map(|(row, col)| Position::at(row, col))
+        .filter(|pos| map.height(pos) == 0)
+        .collect_vec();
+    
+    starts.into_par_iter().map(|start| {
+        let new_map = Map {
+            heights: map.heights.clone(),
+            start,
+            end: map.end,
+        };
+
+        fewest_steps(&new_map)
+    }).min().unwrap_or(usize::MAX)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -155,5 +177,12 @@ mod tests {
         let map = parse_map("input/day12_sample.txt");
 
         assert_eq!(31, fewest_steps(&map));
+    }
+
+    #[test]
+    fn test_best_start() {
+        let map = parse_map("input/day12_sample.txt");
+
+        assert_eq!(29, best_start(&map));
     }
 }
