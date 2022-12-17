@@ -6,6 +6,7 @@ use std::io::{BufRead, BufReader};
 use itertools::Itertools;
 use rayon::prelude::*;
 
+#[allow(dead_code)]
 pub fn solution() {
     let map = parse_map("input/day12.txt");
 
