@@ -8,7 +8,8 @@ pub fn solution() {
     let lines = parse_lines("input/day14.txt");
 
     println!("Day 14");
-    println!("Part 1: {}", sand_rest(&lines));
+    println!("Part 1: {}", sand_falling(&lines));
+    println!("Part 2: {}", sand_floor(&lines));
 }
 
 fn parse_lines(filename: &str) -> Vec<Vec<Point>> {
@@ -56,17 +57,10 @@ impl Point {
     }
 }
 
-fn sand_rest(lines: &Vec<Vec<Point>>) -> usize {
-    let mut filled: HashSet<Point> = HashSet::new();
-
-    // Fill in all of the solid lines.
-    for line in lines {
-        for segment in line.windows(2) {
-            for point in segment[0].to(&segment[1]) {
-                filled.insert(point);
-            }
-        }
-    }
+/// sand_falling returns the number of grains of sand that come to rest after being dropped
+/// from 500,0 with the given rocks, with no floor.
+fn sand_falling(lines: &Vec<Vec<Point>>) -> usize {
+    let mut filled = draw_rocks(lines);
 
     let num_rocks = filled.len();
     let lowest_rock = filled.iter().map(|rock| rock.y).max().unwrap();
@@ -102,13 +96,73 @@ fn sand_rest(lines: &Vec<Vec<Point>>) -> usize {
     filled.len() - num_rocks
 }
 
+/// sand_floor returns the number of grains of sand that come to rest after being dropped
+/// from 500,0 with the given rocks, with a floor below the lowest rock.
+fn sand_floor(lines: &Vec<Vec<Point>>) -> usize {
+    let mut filled = draw_rocks(lines);
+
+    let num_rocks = filled.len();
+    let lowest_rock = filled.iter().map(|rock| rock.y).max().unwrap();
+
+    // Sand falls from 500,0, and tries to drop down,
+    // down and to the left, then down and to the right.
+    loop {
+        let mut sand = Point::at(500, 0);
+        if filled.contains(&sand) {
+            break
+        }
+
+        while sand.y < lowest_rock + 1 {
+            let (down, left, right) = (sand.down(), sand.left(), sand.right());
+
+            if !filled.contains(&down) {
+                sand = down;
+            } else if !filled.contains(&left) {
+                sand = left;
+            } else if !filled.contains(&right) {
+                sand = right;
+            } else {
+                filled.insert(sand);
+                break;
+            }
+        }
+
+        if sand.y == lowest_rock + 1 {
+            filled.insert(sand);
+        }
+    }
+
+    filled.len() - num_rocks
+}
+
+fn draw_rocks(lines: &Vec<Vec<Point>>) -> HashSet<Point> {
+    let mut filled: HashSet<Point> = HashSet::new();
+
+    // Fill in all of the solid lines.
+    for line in lines {
+        for segment in line.windows(2) {
+            for point in segment[0].to(&segment[1]) {
+                filled.insert(point);
+            }
+        }
+    }
+
+    filled
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_sand_rest() {
+    fn test_sand_falling() {
         let lines = parse_lines("input/day14_sample.txt");
-        assert_eq!(24, sand_rest(&lines));
+        assert_eq!(24, sand_falling(&lines));
+    }
+
+    #[test]
+    fn test_sand_floor() {
+        let lines = parse_lines("input/day14_sample.txt");
+        assert_eq!(93, sand_floor(&lines));
     }
 }
