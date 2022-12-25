@@ -8,6 +8,7 @@ use std::string::ParseError;
 use itertools::Itertools;
 use regex::Regex;
 
+#[allow(dead_code)]
 pub fn solution() {
     let sensors = load_sensors("input/day15.txt");
 

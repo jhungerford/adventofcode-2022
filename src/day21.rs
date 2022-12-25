@@ -5,6 +5,7 @@ use std::str::FromStr;
 use std::string::ParseError;
 use itertools::Itertools;
 
+#[allow(dead_code)]
 pub fn solution() {
     let monkeys = load_monkeys("input/day21.txt");
 
