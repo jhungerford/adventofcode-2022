@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use itertools::Itertools;
 
+#[allow(dead_code)]
 pub fn solution() {
     let numbers = load_numbers("input/day25.txt");
 
