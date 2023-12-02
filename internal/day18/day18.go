@@ -44,8 +44,11 @@ func Part1(cubes []Cube) int {
 
 // Part2 counts the number of sides of cubes that are on the outside of lava droplets.
 func Part2(cubes []Cube) int {
-	// cubeAxes is used to quickly look up whether a cube is on the outside, enclosedCubes
+	// axes is used to quickly look up whether a cube is on the outside
 	axes := toAxes(cubes)
+
+	// enclosedCubes contains the list of cubes that are known to be enclosed.  Lava droplets are enclosed to make
+	// finding other enclosed pockets and adjacent sizes easier.
 	enclosedCubes := map[Cube]interface{}{}
 
 	// Lava cubes are enclosed
