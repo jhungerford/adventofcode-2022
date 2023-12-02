@@ -45,7 +45,7 @@ func Part1(cubes []Cube) int {
 // Part2 counts the number of sides of cubes that are on the outside of lava droplets.
 func Part2(cubes []Cube) int {
 	// cubeAxes is used to quickly look up whether a cube is on the outside, enclosedCubes
-	cubeAxes := toAxes(cubes)
+	axes := toAxes(cubes)
 	enclosedCubes := map[Cube]interface{}{}
 
 	// Lava cubes are enclosed
@@ -56,7 +56,7 @@ func Part2(cubes []Cube) int {
 	// Check each cube's neighbor to determine if it's on the inside of a droplet.
 	for _, cube := range cubes {
 		for _, neighbor := range cube.neighbors() {
-			if newEnclosed, ok := neighbor.isEnclosed(enclosedCubes, cubeAxes); ok {
+			if newEnclosed, ok := neighbor.isEnclosed(enclosedCubes, axes); ok {
 				for newEnclosedCube, _ := range newEnclosed {
 					enclosedCubes[newEnclosedCube] = nil
 				}
@@ -109,12 +109,12 @@ func (c Cube) neighbors() []Cube {
 
 // isEnclosed returns whether this cube is enclosed, returning newly discovered enclosed cubes and whether this
 // cube is enclosed.  If this cube was already known to be enclosed, no new cubes are discovered.
-func (c Cube) isEnclosed(enclosedCubes map[Cube]interface{}, cubeAxes axes) (map[Cube]interface{}, bool) {
+func (c Cube) isEnclosed(enclosedCubes map[Cube]interface{}, axes map[tangent][]int) (map[Cube]interface{}, bool) {
 	if _, ok := enclosedCubes[c]; ok {
 		return nil, true
 	}
 
-	// Start with this cube, and work outwards.
+	// Start with this cube and work outwards from its neighbors.
 	toCheck := []Cube{c}
 	checked := map[Cube]interface{}{c: nil}
 
@@ -123,7 +123,7 @@ func (c Cube) isEnclosed(enclosedCubes map[Cube]interface{}, cubeAxes axes) (map
 
 		check, toCheck = toCheck[0], toCheck[1:]
 
-		if !check.hasBoundingCubes(cubeAxes) {
+		if !check.hasBoundingCubes(axes) {
 			return nil, false
 		}
 
@@ -143,96 +143,68 @@ func (c Cube) isEnclosed(enclosedCubes map[Cube]interface{}, cubeAxes axes) (map
 
 // hasBoundingCubes returns whether there's at least one cube on all sides of this cube, possibly with empty space
 // between this cube and the bound.
-func (c Cube) hasBoundingCubes(cubeAxes axes) bool {
-	// On each plane, the cube has other cube on either side if it isn't the last cube in the plane.
-	zs, found := cubeAxes.xyPos[c.xy()]
-	if !found {
-		return false
-	}
+func (c Cube) hasBoundingCubes(axes map[tangent][]int) bool {
+	for _, cubeAxis := range cubeAxes {
+		tan, pos := cubeAxis(c)
 
-	if zi := sort.SearchInts(zs, c.z); zi == 0 || zi == len(zs) {
-		return false
-	}
+		otherPositions, found := axes[tan]
+		if !found {
+			return false
+		}
 
-	ys, found := cubeAxes.xzPos[c.xz()]
-	if !found {
-		return false
-	}
-
-	if yi := sort.SearchInts(ys, c.y); yi == 0 || yi == len(ys) {
-		return false
-	}
-
-	xs, found := cubeAxes.yzPos[c.yz()]
-	if !found {
-		return false
-	}
-
-	if xi := sort.SearchInts(xs, c.x); xi == 0 || xi == len(xs) {
-		return false
+		// On each axis, the cube has other cubes on either side if it isn't the last cube in the tangent.
+		if i := sort.SearchInts(otherPositions, pos); i == 0 || i == len(otherPositions) {
+			return false
+		}
 	}
 
 	return true
 }
 
-// xy returns the xy axis of this cube.
-func (c Cube) xy() xy {
-	return xy{x: c.x, y: c.y}
+// getTangentPosition returns this cube's tangent plane and position along the tangent line.
+type getTangentPosition func(c Cube) (tangent, int)
+
+// xy returns the xy axis and z value of this cube.
+func (c Cube) xy() (tangent, int) {
+	return tangent{"xy", c.x, c.y}, c.z
 }
 
-// xz returns the xz axis of this cube.
-func (c Cube) xz() xz {
-	return xz{x: c.x, z: c.z}
+// xz returns the xz axis and y value of this cube.
+func (c Cube) xz() (tangent, int) {
+	return tangent{"xz", c.x, c.z}, c.y
 }
 
-// yz returns the yz axis of this cube.
-func (c Cube) yz() yz {
-	return yz{y: c.y, z: c.z}
+// yz returns the yz axis and x value of this cube.
+func (c Cube) yz() (tangent, int) {
+	return tangent{"yz", c.y, c.z}, c.x
+
 }
 
-type xy struct {
-	x, y int
+// tangent is a named plane and position on that plane.
+type tangent struct {
+	name string
+	a, b int
 }
 
-type xz struct {
-	x, z int
-}
+// cubeAxes is a list of functions that can extract a tangent plane and position from a cube.
+var cubeAxes = []getTangentPosition{Cube.xy, Cube.xz, Cube.yz}
 
-type yz struct {
-	y, z int
-}
+// toAxes converts the list of cubes to a map of tangents to a list of sorted cube values along the tangent line.
+// The sorted cube values are useful for quickly checking whether a cube is between other cubes along an axis.
+func toAxes(cubes []Cube) map[tangent][]int {
+	axes := map[tangent][]int{}
 
-// axes contains maps of planes to a sorted list of cube positions on those planes.
-type axes struct {
-	xyPos map[xy][]int
-	xzPos map[xz][]int
-	yzPos map[yz][]int
-}
+	for _, cubeAxis := range cubeAxes {
+		for _, cube := range cubes {
+			tan, pos := cubeAxis(cube)
 
-func toAxes(cubes []Cube) axes {
-	a := axes{
-		xyPos: map[xy][]int{},
-		xzPos: map[xz][]int{},
-		yzPos: map[yz][]int{},
+			axes[tan] = append(axes[tan], pos)
+		}
 	}
 
-	for _, cube := range cubes {
-		a.xyPos[cube.xy()] = append(a.xyPos[cube.xy()], cube.z)
-		a.xzPos[cube.xz()] = append(a.xzPos[cube.xz()], cube.y)
-		a.yzPos[cube.yz()] = append(a.yzPos[cube.yz()], cube.x)
+	for _, positions := range axes {
+		slices.Sort(positions)
 	}
 
-	for _, value := range a.xyPos {
-		slices.Sort(value)
-	}
-
-	for _, value := range a.xzPos {
-		slices.Sort(value)
-	}
-
-	for _, value := range a.yzPos {
-		slices.Sort(value)
-	}
-
-	return a
+	return axes
 }
